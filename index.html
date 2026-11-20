@@ -39,6 +39,7 @@
             --font-body: 'Inter', -apple-system, sans-serif;
             --nav-height: 64px;
             --bottom-nav-height: 60px;
+            --banner-height: 0px;
             --max-width: 1280px;
             --success: #2d8a4e;
             --danger: #c0392b;
@@ -121,7 +122,7 @@
 
         .top-nav {
             position: sticky;
-            top: 0;
+            top: var(--banner-height);
             z-index: 100;
             background: rgba(255, 255, 255, 0.94);
             backdrop-filter: blur(14px);
@@ -225,7 +226,7 @@
         .mobile-menu {
             display: none;
             position: fixed;
-            top: var(--nav-height);
+            top: calc(var(--banner-height) + var(--nav-height));
             left: 0;
             right: 0;
             background: #fff;
@@ -1103,7 +1104,7 @@
         .search-overlay {
             position: fixed;
             inset: 0;
-            top: var(--nav-height);
+            top: calc(var(--banner-height) + var(--nav-height));
             z-index: 140;
             background: rgba(0, 0, 0, 0.28);
             display: none;
@@ -1236,6 +1237,76 @@
             padding: 30px 16px;
             color: var(--text-light);
             font-size: 0.85rem;
+        }
+
+        /* ═══════════ ADVERTISING TAPE (marquee) ═══════════ */
+        .ad-tape {
+            position: sticky;
+            top: 0;
+            z-index: 101;
+            height: var(--banner-height);
+            background: var(--text);
+            color: #fff;
+            overflow: hidden;
+            display: none;
+            align-items: center;
+            font-family: var(--font-body);
+            font-size: 0.76rem;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            user-select: none;
+        }
+
+        .ad-tape.visible {
+            display: flex;
+        }
+
+        .ad-tape-track {
+            display: flex;
+            flex-direction: row;
+            white-space: nowrap;
+            will-change: transform;
+        }
+
+        .ad-tape-track>span {
+            flex-shrink: 0;
+            padding: 0 2.5em;
+        }
+
+        /* LTR (French): scroll right-to-left — content slides left */
+        html[dir="ltr"] .ad-tape-track {
+            animation: ad-tape-scroll-ltr 40s linear infinite;
+        }
+
+        /* RTL (Arabic): scroll left-to-right — content slides right.
+           translateX moves POSITIVE because RTL layout extends leftward;
+           negative translateX would push the track off-screen. */
+        html[dir="rtl"] .ad-tape-track {
+            animation: ad-tape-scroll-rtl 40s linear infinite;
+        }
+
+        .ad-tape:hover .ad-tape-track {
+            animation-play-state: paused;
+        }
+
+        @keyframes ad-tape-scroll-ltr {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(-50%);
+            }
+        }
+
+        @keyframes ad-tape-scroll-rtl {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(50%);
+            }
         }
 
         .admin-table-wrap {
@@ -1661,6 +1732,9 @@
                 المجموعات الفاخرة...</p>
         </div>
     </div>
+    <div class="ad-tape" id="adTape" aria-live="off">
+        <div class="ad-tape-track" id="adTapeTrack"></div>
+    </div>
     <nav class="top-nav" id="topNav">
         <div class="nav-brand" onclick="navigate('home')"><span>.</span>DMB</div>
         <div class="nav-links" id="navLinks">
@@ -1834,14 +1908,16 @@
         const BRANCHES_SHEET_ID = '1bvu85IIKLj1XUUOdI6MztappobUOnV77Dn8v8RoFsNU';
         const VOLUME_PRICES_SHEET_ID = '1UxqFn0Irl_t-4pDJHOkVAdLTZrjMhhxCgu8CXDjzehs';
         const TYPES_SHEET_ID = '1si-UQEG-O10B3v3VH2f9Wyf3n2BTckv1vUFDZSrSCW8';
+        const BANNER_SHEET_ID = '1M5rcWPtsoJObfr9N1VD-g-lya7cfYm5vtJ3sxuqBqGo';
         const PRODUCTS_SHEET_NAME = 'Products';
         const CATEGORIES_SHEET_NAME = 'Categories';
         const BRANCHES_SHEET_NAME = 'Branches';
         const VOLUME_PRICES_SHEET_NAME = 'VolumePrices';
         const TYPES_SHEET_NAME = 'Types';
+        const BANNER_SHEET_NAME = 'Banner';
         const ORDER_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzAqToGNKACRVYnsnqmq7S9aFdSJM4fwECTjiJBJqs0O3V_Q8xjKzHnpYuTIMInUxfN/exec';
 
-        let products = [], categories = [], branches = [], volumePrices = [], types = [];
+        let products = [], categories = [], branches = [], volumePrices = [], types = [], banners = [];
 
         // Division volume ladder — order matters
         const DIVISION_VOLUME_LADDER = [10, 20, 30, 40, 80, 100, 120, 150];
@@ -1938,16 +2014,19 @@
             }
             return keyStr;
         }
+
         function toggleLanguage() {
             lang = lang === 'ar' ? 'fr' : 'ar';
             document.documentElement.lang = lang;
             document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
             document.getElementById('langLabel').textContent = lang === 'ar' ? 'Français' : 'العربية';
             applyTranslations();
+            renderAdTape();
             renderPage(STATE.currentPage);
             updateCartBadge();
             lucide.createIcons();
         }
+
         function applyTranslations() {
             document.querySelectorAll('[data-translate]').forEach(el => {
                 const key = el.getAttribute('data-translate');
@@ -1983,6 +2062,14 @@
                 volumePrices = await fetchSheetData(VOLUME_PRICES_SHEET_ID, VOLUME_PRICES_SHEET_NAME);
                 types = await fetchSheetData(TYPES_SHEET_ID, TYPES_SHEET_NAME);
 
+                // Banner sheet is optional — if it fails, skip the ad tape without breaking the site
+                try {
+                    banners = await fetchSheetData(BANNER_SHEET_ID, BANNER_SHEET_NAME);
+                } catch (bannerErr) {
+                    console.warn('Banner sheet failed to load, ad tape disabled:', bannerErr);
+                    banners = [];
+                }
+
                 // Normalize category slugs & product categories (trim whitespace)
                 categories = categories.map(c => ({
                     ...c,
@@ -2000,6 +2087,7 @@
                 overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
 
                 buildDynamicUI();
+                renderAdTape();
                 applyTranslations();
 
                 const initialHash = decodeURIComponent(window.location.hash.replace('#', ''));
@@ -2013,7 +2101,8 @@
             } catch (error) {
                 console.error('Failed to load sheet data:', error);
                 alert('Could not load store data. Please check your API key and sheet setup.');
-                products = []; categories = []; branches = []; volumePrices = []; types = [];
+                products = []; categories = []; branches = []; volumePrices = []; types = []; banners = [];
+                renderAdTape();
                 const overlay = document.getElementById('loadingOverlay');
                 if (overlay) {
                     overlay.classList.add('loading-hidden');
@@ -2914,6 +3003,68 @@
             renderSearchResults(query);
         }
 
+        // ═══════════ FUZZY SEARCH HELPERS ═══════════
+        function levenshtein(a, b) {
+            if (a === b) return 0;
+            if (!a.length) return b.length;
+            if (!b.length) return a.length;
+            let prev = new Array(b.length + 1);
+            let curr = new Array(b.length + 1);
+            for (let j = 0; j <= b.length; j++) prev[j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                curr[0] = i;
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+                }
+                [prev, curr] = [curr, prev];
+            }
+            return prev[b.length];
+        }
+
+        // Returns a score for how well `query` matches `text`.
+        // 0 = no match. Higher = better match.
+        function fuzzyScore(text, query) {
+            if (!text || !query) return 0;
+            text = String(text).toLowerCase();
+            query = String(query).toLowerCase();
+
+            // Very short queries — only accept exact substrings to avoid noise
+            if (query.length < 2) {
+                return text.includes(query) ? 500 : 0;
+            }
+
+            // 1. Exact substring — highest priority, bonus if at the start
+            const idx = text.indexOf(query);
+            if (idx !== -1) return idx === 0 ? 10000 : 5000 - idx;
+
+            // 2. Subsequence check — all query chars appear in order
+            let qi = 0;
+            for (let i = 0; i < text.length && qi < query.length; i++) {
+                if (text[i] === query[qi]) qi++;
+            }
+            const subseqOk = qi === query.length;
+
+            // 3. Levenshtein against each word (tolerates typos)
+            const words = text.split(/[\s\-_.,()/]+/).filter(Boolean);
+            let bestWord = 0;
+            for (const w of words) {
+                const dist = levenshtein(w, query);
+                const minLen = Math.min(w.length, query.length);
+                if (!minLen) continue;
+                const ratio = dist / minLen;
+                let s = 0;
+                if (ratio <= 0.2) s = 800;        // 1 typo per ~5 chars
+                else if (ratio <= 0.35) s = 400;  // 1 typo per ~3 chars
+                else if (ratio <= 0.5) s = 120;   // 1 typo per ~2 chars
+                if (s > bestWord) bestWord = s;
+            }
+            if (bestWord > 0) return bestWord;
+
+            // 4. Subsequence fallback — low confidence but keeps results
+            return subseqOk ? 50 : 0;
+        }
+
         function renderSearchResults(query) {
             const container = document.getElementById('searchResults');
             if (!container) return;
@@ -2930,12 +3081,23 @@
             const activeProducts = products.filter(p => String(p.status).toLowerCase() === 'active');
             const uniqueProducts = getUniqueProducts(activeProducts);
 
-            const matched = uniqueProducts.filter(p => {
+            // Score every product, then sort by score
+            const scored = [];
+            for (const p of uniqueProducts) {
                 const name = String(p.name || '').toLowerCase();
                 const cat = String(p.category || '').toLowerCase();
                 const dupe = String(p.dupeOf || '').toLowerCase();
-                return name.includes(q) || cat.includes(q) || dupe.includes(q);
-            }).slice(0, 20);
+
+                const nameScore = fuzzyScore(name, q);
+                const catScore = fuzzyScore(cat, q) * 0.4;   // category is secondary
+                const dupeScore = fuzzyScore(dupe, q) * 0.7; // dupeOf is secondary
+
+                const best = Math.max(nameScore, catScore, dupeScore);
+                if (best > 0) scored.push({ p, score: best });
+            }
+
+            scored.sort((a, b) => b.score - a.score);
+            const matched = scored.slice(0, 20).map(s => s.p);
 
             if (matched.length === 0) {
                 container.innerHTML = `<div class="search-empty">${lang === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'
@@ -2956,23 +3118,64 @@
                 }
 
                 return `
-        <div class="search-result-item" onclick="openSearchResult(${p.id})">
-            <img src="${img}" alt="${p.name}" loading="lazy">
-            <div class="search-result-info">
-                <div class="search-result-name">${p.name}</div>
-                <div class="search-result-meta">
-                    <span>${p.category}</span>
-                    ${p.dupeOf ? `<span>· ${t('dupeOf')} ${p.dupeOf}</span>` : ''}
-                </div>
-            </div>
-            ${priceLabel ? `<div class="search-result-price">${priceLabel}</div>` : ''}
-        </div>`;
+                <div class="search-result-item" onclick="openSearchResult(${p.id})">
+                    <img src="${img}" alt="${p.name}" loading="lazy">
+                    <div class="search-result-info">
+                        <div class="search-result-name">${p.name}</div>
+                        <div class="search-result-meta">
+                            <span>${p.category}</span>
+                            ${p.dupeOf ? `<span>· ${t('dupeOf')} ${p.dupeOf}</span>` : ''}
+                        </div>
+                    </div>
+                    ${priceLabel ? `<div class="search-result-price">${priceLabel}</div>` : ''}
+                </div>`;
             }).join('');
         }
 
         function openSearchResult(productId) {
             closeSearch();
             navigate('product-detail', productId);
+        }
+
+        // ═══════════ ADVERTISING TAPE (marquee) ═══════════
+        function renderAdTape() {
+            const tape = document.getElementById('adTape');
+            const track = document.getElementById('adTapeTrack');
+            if (!tape || !track) return;
+
+            const key = lang === 'ar' ? 'ar' : 'fr';
+
+            const msgs = (banners || [])
+                .map(b => String(b[key] || '').trim())
+                .filter(Boolean);
+
+            if (msgs.length === 0) {
+                tape.classList.remove('visible');
+                document.documentElement.style.setProperty('--banner-height', '0px');
+                track.innerHTML = '';
+                return;
+            }
+
+            document.documentElement.style.setProperty('--banner-height', '34px');
+            tape.classList.add('visible');
+
+            // Join all messages with a bullet, then repeat until it's wide enough
+            const joined = msgs.join('  •  ') + '  •  ';
+            let content = joined;
+            while (content.length < 500) content += joined;
+
+            // Two identical spans, animation shifts -50% → seamless infinite loop
+            track.innerHTML = '';
+            for (let i = 0; i < 2; i++) {
+                const span = document.createElement('span');
+                span.textContent = content;
+                track.appendChild(span);
+            }
+
+            // Restart animation so a direction change (ar ↔ fr) takes effect immediately
+            track.style.animation = 'none';
+            void track.offsetWidth;
+            track.style.animation = '';
         }
 
         function toggleWishlist(pid) {
