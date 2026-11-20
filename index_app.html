@@ -744,7 +744,10 @@
 
         .cart-overlay {
             position: fixed;
-            inset: 0;
+            top: calc(var(--banner-height) + var(--safe-top));
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(0, 0, 0, 0.3);
             z-index: 200;
             display: none;
@@ -759,11 +762,11 @@
 
         .cart-drawer {
             position: fixed;
-            top: 0;
+            top: calc(var(--banner-height) + var(--safe-top));
             right: 0;
+            bottom: 0;
             width: 100%;
             max-width: 420px;
-            height: 100dvh;
             background: #fff;
             z-index: 201;
             transform: translateX(100%);
@@ -771,8 +774,6 @@
             display: flex;
             flex-direction: column;
             box-shadow: var(--shadow-lg);
-            padding-top: var(--safe-top);
-            box-sizing: border-box;
         }
 
         .cart-drawer.open {
@@ -1595,9 +1596,6 @@
                 font-size: 0.85rem;
             }
 
-            .cart-drawer {
-                max-width: 100%;
-            }
 
             .whatsapp-float {
                 bottom: calc(70px + var(--safe-bottom));
