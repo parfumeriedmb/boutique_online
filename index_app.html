@@ -771,6 +771,8 @@
             display: flex;
             flex-direction: column;
             box-shadow: var(--shadow-lg);
+            padding-top: var(--safe-top);
+            box-sizing: border-box;
         }
 
         .cart-drawer.open {
@@ -894,7 +896,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(20px + var(--safe-bottom));
             flex-shrink: 0;
         }
 
@@ -1542,7 +1544,7 @@
             }
 
             .cart-footer {
-                padding-bottom: calc(var(--bottom-nav-height) + 20px + env(safe-area-inset-bottom, 0px));
+                padding-bottom: calc(var(--bottom-nav-height) + 20px + var(--safe-bottom));
             }
 
             .category-cards {
@@ -1874,8 +1876,6 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
-    <a class="whatsapp-float" href="https://wa.me/213671951500" target="_blank"><ion-icon
-            name="logo-whatsapp"></ion-icon></a>
 
     <nav class="bottom-nav" id="bottomNav">
         <button data-page="home" onclick="navigate('home')" class="active"><i data-lucide="home" class="icon"></i><span
