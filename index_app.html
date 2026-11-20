@@ -3,7 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DMB — عطور فاخرة، نظارات وساعات</title>
     <meta name="description" content="اكتشف أفخم العطور، النظارات والساعات. تسوق الأناقة الخالدة.">
     <meta name="theme-color" content="#ffffff">
@@ -16,6 +18,8 @@
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <style>
         :root {
+            --safe-top: 0px;
+            --safe-bottom: 0px;
             --bg: #ffffff;
             --bg-alt: #fafaf9;
             --bg-card: #ffffff;
@@ -45,6 +49,13 @@
             --danger: #c0392b;
             --warning: #e67e22;
             --info: #2980b9;
+        }
+
+        @supports (padding: env(safe-area-inset-bottom)) {
+            :root {
+                --safe-top: env(safe-area-inset-top, 0px);
+                --safe-bottom: env(safe-area-inset-bottom, 0px);
+            }
         }
 
         * {
@@ -122,7 +133,7 @@
 
         .top-nav {
             position: sticky;
-            top: var(--banner-height);
+            top: calc(var(--banner-height) + var(--safe-top));
             z-index: 100;
             background: rgba(255, 255, 255, 0.94);
             backdrop-filter: blur(14px);
@@ -226,7 +237,7 @@
         .mobile-menu {
             display: none;
             position: fixed;
-            top: calc(var(--banner-height) + var(--nav-height));
+            top: calc(var(--banner-height) + var(--safe-top) + var(--nav-height));
             left: 0;
             right: 0;
             background: #fff;
@@ -278,8 +289,9 @@
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             border-top: 1px solid var(--border);
-            height: var(--bottom-nav-height);
+            height: calc(var(--bottom-nav-height) + var(--safe-bottom));
             padding: 0 6px;
+            padding-bottom: var(--safe-bottom);
             justify-content: space-around;
             align-items: center;
         }
@@ -993,7 +1005,7 @@
 
         .toast-container {
             position: fixed;
-            bottom: 80px;
+            bottom: calc(80px + var(--safe-bottom));
             right: 18px;
             z-index: 300;
             display: flex;
@@ -1035,7 +1047,7 @@
 
         .whatsapp-float {
             position: fixed;
-            bottom: 85px;
+            bottom: calc(85px + env(safe-area-inset-bottom, 0px));
             right: 18px;
             z-index: 150;
             width: 48px;
@@ -1104,7 +1116,7 @@
         .search-overlay {
             position: fixed;
             inset: 0;
-            top: calc(var(--banner-height) + var(--nav-height));
+            top: calc(var(--banner-height) + var(--safe-top) + var(--nav-height));
             z-index: 140;
             background: rgba(0, 0, 0, 0.28);
             display: none;
@@ -1244,7 +1256,8 @@
             position: sticky;
             top: 0;
             z-index: 101;
-            height: var(--banner-height);
+            height: calc(var(--banner-height) + var(--safe-top));
+            padding-top: var(--safe-top);
             background: var(--text);
             color: #fff;
             overflow: hidden;
@@ -1549,7 +1562,7 @@
             }
 
             body {
-                padding-bottom: var(--bottom-nav-height);
+                padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
             }
 
             .hero {
@@ -1585,7 +1598,7 @@
             }
 
             .whatsapp-float {
-                bottom: 70px;
+                bottom: calc(70px + var(--safe-bottom));
                 right: 12px;
                 width: 42px;
                 height: 42px;
@@ -3043,16 +3056,15 @@
             return subseqOk ? 50 : 0;
         }
 
-                function renderSearchResults(query) {
+        function renderSearchResults(query) {
             const container = document.getElementById('searchResults');
             if (!container) return;
 
             const q = String(query || '').trim().toLowerCase();
 
             if (!q) {
-                container.innerHTML = `<div class="search-empty">${
-                    lang === 'ar' ? 'ابدأ الكتابة للبحث...' : 'Commencez à taper pour rechercher...'
-                }</div>`;
+                container.innerHTML = `<div class="search-empty">${lang === 'ar' ? 'ابدأ الكتابة للبحث...' : 'Commencez à taper pour rechercher...'
+                    }</div>`;
                 return;
             }
 
@@ -3070,7 +3082,7 @@
                     const key = String(ty.perfumeId);
                     const prev = typeMatches.get(key);
                     if (!prev || s > prev.score) {
-                        typeMatches.set(key, {score: s, typeName: ty.TypeName});
+                        typeMatches.set(key, { score: s, typeName: ty.TypeName });
                     }
                 }
             }
@@ -3091,7 +3103,7 @@
 
                 const best = Math.max(nameScore, catScore, dupeScore, typeScore);
                 if (best > 0) {
-                    scored.push({p, score: best, typeName: typeMatch ? typeMatch.typeName : null});
+                    scored.push({ p, score: best, typeName: typeMatch ? typeMatch.typeName : null });
                 }
             }
 
@@ -3099,13 +3111,12 @@
             const matched = scored.slice(0, 20);
 
             if (matched.length === 0) {
-                container.innerHTML = `<div class="search-empty">${
-                    lang === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'
-                }</div>`;
+                container.innerHTML = `<div class="search-empty">${lang === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'
+                    }</div>`;
                 return;
             }
 
-            container.innerHTML = matched.map(({p, typeName}) => {
+            container.innerHTML = matched.map(({ p, typeName }) => {
                 const img = getProductImage(p, 0);
                 const catNorm = String(p.category).trim().toLowerCase();
                 const isPerfumeCat = ['extraits', 'parfums de division', 'testeurs', 'dupes', 'parfums']
