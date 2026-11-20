@@ -2133,19 +2133,7 @@
                 wishlistMobileLink.before(a);
             });
 
-            // Footer
-            const footer = document.getElementById('siteFooter');
-            footer.querySelectorAll('.dynamic-cat-link').forEach(el => el.remove());
-            const homeFooterLink = footer.querySelector('a[href="#home"]');
-            activeCategories.forEach(cat => {
-                const a = document.createElement('a');
-                a.href = '#' + cat.slug;
-                a.className = 'dynamic-cat-link';
-                a.setAttribute('onclick', `navigate('${cat.slug}')`);
-                a.dataset.translate = cat.slug;
-                a.textContent = t(cat.slug);
-                homeFooterLink.after(a);
-            });
+;
 
             // Category cards
             document.getElementById('categoryCards').innerHTML = activeCategories.map(cat => `
