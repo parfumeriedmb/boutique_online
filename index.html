@@ -3065,21 +3065,37 @@
             return subseqOk ? 50 : 0;
         }
 
-        function renderSearchResults(query) {
+                function renderSearchResults(query) {
             const container = document.getElementById('searchResults');
             if (!container) return;
 
             const q = String(query || '').trim().toLowerCase();
 
             if (!q) {
-                container.innerHTML = `<div class="search-empty">${lang === 'ar' ? 'ابدأ الكتابة للبحث...' : 'Commencez à taper pour rechercher...'
-                    }</div>`;
+                container.innerHTML = `<div class="search-empty">${
+                    lang === 'ar' ? 'ابدأ الكتابة للبحث...' : 'Commencez à taper pour rechercher...'
+                }</div>`;
                 return;
             }
 
             // Only active products, one row per product id (skips colour variants)
             const activeProducts = products.filter(p => String(p.status).toLowerCase() === 'active');
             const uniqueProducts = getUniqueProducts(activeProducts);
+
+            // Pre-compute best type match per product (perfumeId → {score, typeName})
+            // If several types of the same product match, keep only the best-scoring one.
+            const typeMatches = new Map();
+            for (const ty of types) {
+                const typeName = String(ty.TypeName || '').toLowerCase();
+                const s = fuzzyScore(typeName, q);
+                if (s > 0) {
+                    const key = String(ty.perfumeId);
+                    const prev = typeMatches.get(key);
+                    if (!prev || s > prev.score) {
+                        typeMatches.set(key, {score: s, typeName: ty.TypeName});
+                    }
+                }
+            }
 
             // Score every product, then sort by score
             const scored = [];
@@ -3089,23 +3105,29 @@
                 const dupe = String(p.dupeOf || '').toLowerCase();
 
                 const nameScore = fuzzyScore(name, q);
-                const catScore = fuzzyScore(cat, q) * 0.4;   // category is secondary
-                const dupeScore = fuzzyScore(dupe, q) * 0.7; // dupeOf is secondary
+                const catScore = fuzzyScore(cat, q) * 0.4;    // category is secondary
+                const dupeScore = fuzzyScore(dupe, q) * 0.7;  // dupeOf is secondary
 
-                const best = Math.max(nameScore, catScore, dupeScore);
-                if (best > 0) scored.push({ p, score: best });
+                const typeMatch = typeMatches.get(String(p.id));
+                const typeScore = typeMatch ? typeMatch.score : 0; // full weight: type is a direct feature
+
+                const best = Math.max(nameScore, catScore, dupeScore, typeScore);
+                if (best > 0) {
+                    scored.push({p, score: best, typeName: typeMatch ? typeMatch.typeName : null});
+                }
             }
 
             scored.sort((a, b) => b.score - a.score);
-            const matched = scored.slice(0, 20).map(s => s.p);
+            const matched = scored.slice(0, 20);
 
             if (matched.length === 0) {
-                container.innerHTML = `<div class="search-empty">${lang === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'
-                    }</div>`;
+                container.innerHTML = `<div class="search-empty">${
+                    lang === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'
+                }</div>`;
                 return;
             }
 
-            container.innerHTML = matched.map(p => {
+            container.innerHTML = matched.map(({p, typeName}) => {
                 const img = getProductImage(p, 0);
                 const catNorm = String(p.category).trim().toLowerCase();
                 const isPerfumeCat = ['extraits', 'parfums de division', 'testeurs', 'dupes', 'parfums']
@@ -3124,6 +3146,7 @@
                         <div class="search-result-name">${p.name}</div>
                         <div class="search-result-meta">
                             <span>${p.category}</span>
+                            ${typeName ? `<span>· ${typeName}</span>` : ''}
                             ${p.dupeOf ? `<span>· ${t('dupeOf')} ${p.dupeOf}</span>` : ''}
                         </div>
                     </div>
